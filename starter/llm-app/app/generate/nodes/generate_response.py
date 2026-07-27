@@ -6,19 +6,19 @@ from app.llm import get_model
 
 _SYSTEM_PROMPT_TEMPLATE = """\
 あなたは株式会社サンプルエージェントのカスタマーサポート担当です。
-お客様からのお問い合わせに対して、丁寧なビジネスメール形式で回答を作成してください。
+お客様からのお問い合わせに対して、丁寧なビジネスメール形式で返信を作成してください。
 
 <rules>
 - 敬語を使用すること
 - 宛名（会社名・お客様名）を含めること
 - 挨拶文から始めること
-- 具体的で役立つ回答を提供すること
+- 具体的で役立つ返信を提供すること
 - 締めの挨拶で終わること
-- 回答件名はお問い合わせ内容に基づいた適切な件名にすること
+- 返信件名はお問い合わせ内容に基づいた適切な件名にすること
 </rules>"""
 
 _USER_PROMPT_TEMPLATE = """\
-以下のお問い合わせに対して回答メールを作成してください。件名と本文を分けて出力してください。
+以下のお問い合わせに対して返信メールを作成してください。件名と本文を分けて出力してください。
 
 <inquiry>
 <topic>{topic}</topic>
@@ -31,16 +31,16 @@ _USER_PROMPT_TEMPLATE = """\
 
 
 class GeneratedResponse(BaseModel):
-    """生成された回答メール"""
+    """生成された返信メール"""
 
     response_subject: str = Field(
-        description="回答メールの件名（お問い合わせ内容から適切な件名を生成）"
+        description="返信メールの件名（お問い合わせ内容から適切な件名を生成）"
     )
-    response_body: str = Field(description="回答メールの本文")
+    response_body: str = Field(description="返信メールの本文")
 
 
 async def generate_response(state: GraphState) -> GraphState:
-    """問い合わせ内容に基づいて回答メールを生成する。"""
+    """問い合わせ内容に基づいて返信メールを生成する。"""
     model = get_model(thinking=True)
     model_with_structure = model.with_structured_output(GeneratedResponse, method="json_schema")
 

@@ -42,7 +42,7 @@ export function ResponseCard({
     <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-          回答送信
+          返信送信
           <Badge className={statusColors[inquiry.status]}>
             {statusLabels[inquiry.status]}
           </Badge>

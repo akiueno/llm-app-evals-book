@@ -113,7 +113,7 @@ test.describe("POST /api/admin/inquiries/[id]/retry（再生成）", () => {
     const id = await createDraftInquiry(request, "再生成");
     const res = await request.post(`/api/admin/inquiries/${id}/retry`);
     expect(res.ok()).toBeTruthy();
-    expect((await res.json()).message).toBe("AI回答の再生成を開始しました");
+    expect((await res.json()).message).toBe("返信案の再生成を開始しました");
     // パイプラインが再実行され processing を抜ける
     await waitUntilProcessed(request, id);
   });

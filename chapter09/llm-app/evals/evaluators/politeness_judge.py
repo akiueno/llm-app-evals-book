@@ -7,7 +7,7 @@ from app.llm import get_model
 
 _SYSTEM_PROMPT_TEMPLATE = """\
 あなたはビジネス日本語の品質を評価する専門家です。
-カスタマーサポートの回答メールが、適切なビジネス敬語で書かれているかを評価してください。
+カスタマーサポートの返信メールが、適切なビジネス敬語で書かれているかを評価してください。
 
 <criteria>
 以下のすべてを満たす場合に「OK」と判定してください。
@@ -21,7 +21,7 @@ _SYSTEM_PROMPT_TEMPLATE = """\
 </criteria>"""
 
 _USER_PROMPT_TEMPLATE = """\
-以下のカスタマーサポート回答メールを評価してください。
+以下のカスタマーサポート返信メールを評価してください。
 
 <inquiry>
 <content>
@@ -44,7 +44,7 @@ class PolitenessJudgeResult(BaseModel):
 
 
 def politeness_judge(inputs: dict[str, Any], outputs: dict[str, Any]) -> dict[str, Any]:
-    """回答メールの敬語・丁寧さを LLM で評価する。"""
+    """返信メールの敬語・丁寧さを LLM で評価する。"""
     model = get_model(thinking=True)
     model_with_structure = model.with_structured_output(
         PolitenessJudgeResult, method="json_schema"

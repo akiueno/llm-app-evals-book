@@ -29,11 +29,11 @@ export async function POST(
       })
     );
 
-    return NextResponse.json({ message: "AI回答の再生成を開始しました" });
+    return NextResponse.json({ message: "返信案の再生成を開始しました" });
   } catch (error) {
     console.error("Error retrying inquiry:", error);
     return NextResponse.json(
-      { error: "AI回答の再生成に失敗しました" },
+      { error: "返信案の再生成に失敗しました" },
       { status: 500 }
     );
   }

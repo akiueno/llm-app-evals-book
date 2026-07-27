@@ -28,7 +28,7 @@ export function HealthCheckModal() {
         <AlertDialogHeader>
           <AlertDialogTitle>FastAPI接続エラー</AlertDialogTitle>
           <AlertDialogDescription>
-            FastAPIに接続できません。AI回答生成機能が利用できない状態です。
+            FastAPIに接続できません。返信案生成機能が利用できない状態です。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

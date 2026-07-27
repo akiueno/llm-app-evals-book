@@ -217,14 +217,14 @@ export default function AdminInquiriesPage() {
                 <Alert>
                   <AlertTitle>AI処理中</AlertTitle>
                   <AlertDescription>
-                    AI回答を生成しています。しばらくお待ちください...
+                    返信案を生成しています。しばらくお待ちください...
                   </AlertDescription>
                 </Alert>
               )}
 
               {selectedInquiry.status === "error" && (
                 <Alert variant="destructive">
-                  <AlertTitle>AI回答の生成に失敗しました</AlertTitle>
+                  <AlertTitle>返信案の生成に失敗しました</AlertTitle>
                   <AlertDescription className="flex flex-col gap-3">
                     <span>
                       FastAPIからの応答取得に失敗しました。再生成を実行してください。
@@ -236,7 +236,7 @@ export default function AdminInquiriesPage() {
                       onClick={() => retryGeneration(selectedInquiry.id)}
                       className="self-start"
                     >
-                      {isRetrying ? "再生成中..." : "AI回答を再生成"}
+                      {isRetrying ? "再生成中..." : "返信案を再生成"}
                     </Button>
                   </AlertDescription>
                 </Alert>

@@ -6,11 +6,11 @@ from pydantic import BaseModel, Field
 from app.llm import get_model
 
 _SYSTEM_PROMPT_TEMPLATE = """\
-あなたはカスタマーサポートの回答メールに禁止コンテンツが含まれていないかを\
+あなたはカスタマーサポートの返信メールに禁止コンテンツが含まれていないかを\
 チェックする品質管理の専門家です。
 
 <forbidden_items>
-以下のいずれかが回答メールに含まれている場合、「NG」と判定してください。
+以下のいずれかが返信メールに含まれている場合、「NG」と判定してください。
 
 1. 見積り金額の提示: 具体的な金額、料金、費用の数値を提示している場合。\
 「お見積もりを作成します」のような案内は問題ありませんが、\
@@ -27,7 +27,7 @@ _SYSTEM_PROMPT_TEMPLATE = """\
 </forbidden_items>"""
 
 _USER_PROMPT_TEMPLATE = """\
-以下のカスタマーサポート回答メールを評価してください。
+以下のカスタマーサポート返信メールを評価してください。
 
 <inquiry>
 <content>
@@ -50,7 +50,7 @@ class ForbiddenContentJudgeResult(BaseModel):
 
 
 def forbidden_content_judge(inputs: dict[str, Any], outputs: dict[str, Any]) -> dict[str, Any]:
-    """回答メールに禁止コンテンツが含まれていないかを LLM で評価する。"""
+    """返信メールに禁止コンテンツが含まれていないかを LLM で評価する。"""
     model = get_model(thinking=True)
     model_with_structure = model.with_structured_output(
         ForbiddenContentJudgeResult, method="json_schema"

@@ -77,8 +77,8 @@ test.describe("問い合わせライフサイクル（フォーム→AI生成→
 
     await gotoAdmin(page);
     await openInquiryByName(page, name);
-    await expect(page.getByText("AI回答の生成に失敗しました")).toBeVisible();
-    const retryButton = page.getByRole("button", { name: "AI回答を再生成" });
+    await expect(page.getByText("返信案の生成に失敗しました")).toBeVisible();
+    const retryButton = page.getByRole("button", { name: "返信案を再生成" });
     await expect(retryButton).toBeEnabled();
 
     // 再生成を実行 → 同じマーカーのため再びエラーで終わる（パイプライン再実行を確認）

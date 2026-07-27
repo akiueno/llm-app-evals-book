@@ -15,7 +15,7 @@ test.describe("FastAPI ヘルスチェックモーダル", () => {
 
     await expect(page.getByText("FastAPI接続エラー")).toBeVisible();
     await expect(
-      page.getByText("FastAPIに接続できません。AI回答生成機能が利用できない状態です。")
+      page.getByText("FastAPIに接続できません。返信案生成機能が利用できない状態です。")
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "再読み込み" })).toBeVisible();
   });
