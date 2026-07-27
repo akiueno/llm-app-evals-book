@@ -44,7 +44,7 @@ class PolitenessJudgeResult(BaseModel):
 
 
 def politeness_judge(inputs: dict[str, Any], outputs: dict[str, Any]) -> dict[str, Any]:
-    """返信メールの敬語・丁寧さを LLM で評価する。"""
+    """返信メールの言葉遣いの丁寧さを LLM で評価する。"""
     model = get_model(thinking=True)
     model_with_structure = model.with_structured_output(
         PolitenessJudgeResult, method="json_schema"

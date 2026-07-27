@@ -50,7 +50,7 @@ class ForbiddenContentJudgeResult(BaseModel):
 
 
 def forbidden_content_judge(inputs: dict[str, Any], outputs: dict[str, Any]) -> dict[str, Any]:
-    """返信メールに禁止コンテンツが含まれていないかを LLM で評価する。"""
+    """返信メールが禁止事項を順守しているかを LLM で評価する。"""
     model = get_model(thinking=True)
     model_with_structure = model.with_structured_output(
         ForbiddenContentJudgeResult, method="json_schema"
