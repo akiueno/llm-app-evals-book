@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from langsmith import AsyncClient, traceable
 from langsmith.run_helpers import get_current_run_tree
 from openevals.string.levenshtein import levenshtein_distance
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.generate.graph import graph
 from app.generate.types import QualityJudgment, TopicType
@@ -80,8 +80,8 @@ async def generate(req: GenerateRequest) -> GenerateResponse:
 
 class FeedbackRequest(BaseModel):
     run_id: str
-    # None = AIの返信案が存在しない (スパム再分類後の手動返信など)。空文字は不可
-    ai_body: str | None = Field(default=None, min_length=1)
+    # None = AIの返信案が存在しない (スパム再分類後の手動返信など)
+    ai_body: str | None = None
     final_body: str
     original_topic: str
     current_topic: str
