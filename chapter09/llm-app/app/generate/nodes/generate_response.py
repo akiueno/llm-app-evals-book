@@ -76,9 +76,9 @@ async def generate_response(state: GraphState) -> GraphState:
     model_with_structure = model.with_structured_output(GeneratedResponse, method="json_schema")
 
     user_content = _USER_PROMPT_TEMPLATE.format(
-        topic=state.get("topic", "other"),
+        topic=state["topic"],
         customer_name=state["customer_name"],
-        company_name=state.get("company_name") or "（なし）",
+        company_name=state["company_name"] or "（なし）",
         content=state["content"],
     )
     messages = [

@@ -38,8 +38,8 @@ async def quality_check(state: GraphState) -> GraphState:
     model_with_structure = model.with_structured_output(QualityCheckResult, method="json_schema")
 
     user_content = _USER_PROMPT_TEMPLATE.format(
-        response_subject=state.get("response_subject", ""),
-        response_body=state.get("response_body", ""),
+        response_subject=state["response_subject"],
+        response_body=state["response_body"],
     )
     messages = [
         SystemMessage(content=_SYSTEM_PROMPT_TEMPLATE),
