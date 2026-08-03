@@ -51,7 +51,15 @@ export function QualityCheckCard({ inquiry }: { inquiry: Inquiry }) {
           </div>
         ) : (
           <div className="text-sm space-y-2">
-            <p>このお問い合わせはスパムと判定されました。対応不要です。</p>
+            <p>
+              {inquiry.topic === "spam"
+                ? "このお問い合わせはスパムと判定されました。対応不要です。"
+                : `スパムと判定されましたが、分類が修正されました。${
+                    inquiry.status === "draft"
+                      ? "下記フォームから返信を作成してください。"
+                      : ""
+                  }`}
+            </p>
             {inquiry.classification_confidence != null && (
               <p className="text-gray-500">
                 分類の確信度:{" "}

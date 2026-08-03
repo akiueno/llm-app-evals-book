@@ -24,7 +24,7 @@ export const POST = (request: Request, context: { params: Promise<{ id: string }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           run_id: inquiry.run_id,
-          ai_body: inquiry.generated_draft?.body ?? "",
+          ai_body: inquiry.generated_draft?.body ?? null,
           final_body: responseBody,
           original_topic: inquiry.original_topic,
           current_topic: inquiry.topic,

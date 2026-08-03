@@ -205,6 +205,7 @@ flowchart TD
 - 品質指標の表示（分類の確信度、丁寧さチェック結果）
 - 返信案の編集機能
 - 承認・送信機能
+- スパム判定の再分類機能（スパム以外へ分類を修正した場合、返信案がなくても手動で返信を作成・送信できる）
 
 #### F-006: 送信完了処理
 
@@ -463,6 +464,8 @@ flowchart TD
 }
 ```
 
+※ `ai_body` はAIの返信案が存在しない場合（スパム判定を担当者が再分類し手動返信した場合など）は `null`。空文字は不可。
+
 **レスポンス**
 
 ```json
@@ -471,6 +474,8 @@ flowchart TD
   "operator_edited_topic": false
 }
 ```
+
+※ `ai_body` が `null` のとき編集距離は未定義のため、`edit_distance` は `null` を返し、LangSmithには `operator_edited_topic` のみ記録する。
 
 ## 5. データ設計
 

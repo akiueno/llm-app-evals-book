@@ -6,6 +6,7 @@ import {
   reseed,
   gotoAdmin,
   openInquiryByName,
+  MARKERS,
 } from "../support/helpers";
 
 test.describe("管理画面 分類修正", () => {
@@ -35,6 +36,48 @@ test.describe("管理画面 分類修正", () => {
     await expect(
       page.getByRole("combobox").filter({ hasText: "プロダクト" })
     ).toBeVisible();
+  });
+
+  // モックLLMのマーカー応答（topic=spam / generated_draft=null / run_id あり）に依存するため @mock
+  test("スパム再分類後に手動返信して送信できる", { tag: "@mock" }, async ({ page, request }) => {
+    const name = unique("スパム再分類");
+    const id = await createInquiry(request, {
+      customer_name: name,
+      customer_email: "spam-reclass@example.com",
+      content: `宣伝メールに見える問い合わせ。${MARKERS.SPAM}`,
+    });
+    await waitForStatus(request, id, "draft");
+
+    await gotoAdmin(page);
+    await openInquiryByName(page, name);
+
+    // スパム判定中は返信フォームが表示されない
+    await expect(
+      page.getByText("このお問い合わせはスパムと判定されました。対応不要です。")
+    ).toBeVisible();
+    await expect(page.locator("#edit-subject")).toHaveCount(0);
+
+    // 分類をプロダクトへ修正すると返信フォームが出現する
+    const correctionSelect = page
+      .getByRole("combobox")
+      .filter({ hasText: "スパム" });
+    await correctionSelect.click();
+    await page.getByRole("option", { name: "プロダクト", exact: true }).click();
+
+    await expect(page.getByText("分類が修正されました")).toBeVisible();
+    await expect(page.locator("#edit-subject")).toBeVisible();
+
+    // 手動で返信を作成して送信（確認ダイアログを承認）
+    page.on("dialog", (dialog) => dialog.accept());
+    await page.locator("#edit-subject").fill("再分類後の手動返信");
+    await page
+      .locator("#edit-body")
+      .fill("お問い合わせいただきありがとうございます。担当者よりご案内いたします。");
+    await page.getByRole("button", { name: "送信", exact: true }).click();
+
+    // 送信済みの読み取り専用ビューへ遷移する
+    await expect(page.getByText("再分類後の手動返信")).toBeVisible();
+    await expect(page.getByText("送信済み").first()).toBeVisible();
   });
 
   test("送信済みの問い合わせでは分類 Select が無効化される", async ({ page }) => {

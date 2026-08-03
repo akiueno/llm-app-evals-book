@@ -253,9 +253,11 @@ export default function AdminInquiriesPage() {
                 onTopicChange={handleTopicChange}
               />
 
+              {/* 下書きなし（スパム判定）でも、分類が修正されていれば手動返信を可能にする */}
               {selectedInquiry.status !== "processing" &&
                 selectedInquiry.status !== "error" &&
-                selectedInquiry.generated_draft && (
+                (selectedInquiry.generated_draft != null ||
+                  selectedInquiry.topic !== "spam") && (
                   <ResponseCard
                     inquiry={selectedInquiry}
                     editSubject={editSubject}

@@ -7,7 +7,7 @@
  * エンドポイント:
  *   GET  /api/health   -> 200 { status: "ok" }
  *   POST /api/generate -> マーカーに応じた GenerateResponse 互換の JSON
- *   POST /api/feedback -> 200 固定スコア（第10章の送信ルートが利用）
+ *   POST /api/feedback -> 200 決定的スコア（第10章の送信ルートが利用。ai_body=null なら edit_distance=null）
  *
  * 起動: npx tsx e2e/support/mock-llm.ts  (PORT は MOCK_LLM_PORT, 既定 8787)
  */
@@ -115,9 +115,24 @@ const server = createServer((req, res) => {
   }
 
   if (req.method === "POST" && url.startsWith("/api/feedback")) {
-    send(res, 200, {
-      operator_edited_topic: false,
-      edit_distance: 0.93,
+    const chunks: Buffer[] = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      let body: {
+        ai_body?: string | null;
+        original_topic?: string;
+        current_topic?: string;
+      } = {};
+      try {
+        body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+      } catch {
+        // 無効なJSONは既定応答にフォールバック
+      }
+      send(res, 200, {
+        operator_edited_topic: body.original_topic !== body.current_topic,
+        // ai_body が null（返信案なし）のとき edit_distance は未定義
+        edit_distance: body.ai_body == null ? null : 0.93,
+      });
     });
     return;
   }
