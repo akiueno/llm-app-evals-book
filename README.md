@@ -4,9 +4,16 @@
 
 <https://www.amazon.co.jp/dp/4798190721>
 
-<!-- TODO: assets/cover.jpg を配置したら有効化
-<img src="assets/cover.jpg" width="50%" />
--->
+<img src="assets/cover.png" alt="『LLMアプリケーション評価駆動開発』のカバー" width="50%" />
+
+## インストールガイド
+
+第2部のハンズオンを始める前に、以下のソフトウェアをインストールしてください。
+
+1. [Git](https://git-scm.com/install/)
+2. [Docker Desktop](./docs/install-docker.md)
+3. [Visual Studio Code](./docs/install-vscode.md)
+4. [Visual Studio Codeの拡張機能「Dev Containers」](./docs/install-devcontainer.md)
 
 ## 第2部のハンズオンの構成
 
