@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import path from "path";
 
 // 型定義
-export type InquiryStatus = "processing" | "draft" | "sent" | "error";
+export type InquiryStatus = "processing" | "draft" | "sent" | "error" | "closed";
 export type InquiryTopic = "development" | "product" | "other" | "spam";
 
 export interface QualityScores {
@@ -289,6 +289,7 @@ export function markAsSent(
     body: string;
     edit_distance: number | null;
     operator_edited_topic: boolean | null;
+    expected_updated_at: string;
   }
 ): Inquiry | null {
   const db = getDb();
@@ -297,19 +298,32 @@ export function markAsSent(
   const stmt = db.prepare(`
     UPDATE inquiries
     SET final_response = ?, status = 'sent', updated_at = ?, sent_at = ?, edit_distance = ?, operator_edited_topic = ?
-    WHERE id = ?
+    WHERE id = ? AND status = 'draft' AND topic != 'spam' AND updated_at = ?
   `);
 
-  stmt.run(
+  const result = stmt.run(
     JSON.stringify({ subject: data.subject, body: data.body }),
     now,
     now,
     data.edit_distance,
     data.operator_edited_topic != null ? (data.operator_edited_topic ? 1 : 0) : null,
-    id
+    id,
+    data.expected_updated_at,
   );
+  if (result.changes === 0) return null;
 
   return getInquiryById(id);
+}
+
+export function closeInquiry(inquiry: Inquiry): Inquiry | null {
+  const result = getDb().prepare(`
+    UPDATE inquiries SET status = 'closed', updated_at = ?,
+      operator_edited_topic = ?, final_response = NULL, edit_distance = NULL
+    WHERE id = ? AND status = 'draft' AND topic = 'spam' AND updated_at = ?
+  `).run(new Date().toISOString(),
+    inquiry.original_topic == null ? null : Number(inquiry.original_topic !== inquiry.topic),
+    inquiry.id, inquiry.updated_at);
+  return result.changes ? getInquiryById(inquiry.id) : null;
 }
 
 function parseInquiryRow(row: Record<string, unknown>): Inquiry {

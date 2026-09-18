@@ -43,7 +43,7 @@ export function TopicCorrectionCard({
         <Select
           value={inquiry.topic}
           onValueChange={onTopicChange}
-          disabled={isUpdatingTopic || inquiry.status === "sent"}
+          disabled={isUpdatingTopic || inquiry.status !== "draft"}
         >
           <SelectTrigger className="w-48">
             <SelectValue placeholder="分類を選択" />

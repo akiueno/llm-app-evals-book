@@ -17,6 +17,7 @@ export const STATUS_LABELS = {
   draft: "下書き",
   sent: "送信済み",
   error: "エラー",
+  closed: "終了",
 } as const;
 
 export const TOPIC_LABELS = {

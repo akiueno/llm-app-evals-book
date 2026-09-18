@@ -39,7 +39,8 @@ test.describe("管理画面 分類修正", () => {
   });
 
   // モックLLMのマーカー応答（topic=spam / generated_draft=null / run_id あり）に依存するため @mock
-  test("スパム再分類後に手動返信して送信できる", { tag: "@mock" }, async ({ page, request }) => {
+  for (const topicLabel of ["プロダクト", "開発支援"]) {
+  test(`スパム再分類後に手動返信して送信できる（${topicLabel}）`, { tag: "@mock" }, async ({ page, request }) => {
     const name = unique("スパム再分類");
     const id = await createInquiry(request, {
       customer_name: name,
@@ -62,7 +63,7 @@ test.describe("管理画面 分類修正", () => {
       .getByRole("combobox")
       .filter({ hasText: "スパム" });
     await correctionSelect.click();
-    await page.getByRole("option", { name: "プロダクト", exact: true }).click();
+    await page.getByRole("option", { name: topicLabel, exact: true }).click();
 
     await expect(page.getByText("分類が修正されました")).toBeVisible();
     await expect(page.locator("#edit-subject")).toBeVisible();
@@ -73,12 +74,19 @@ test.describe("管理画面 分類修正", () => {
     await page
       .locator("#edit-body")
       .fill("お問い合わせいただきありがとうございます。担当者よりご案内いたします。");
+    await page.getByRole("button", { name: "下書き保存", exact: true }).click();
+    await expect(page.getByText("下書きを保存しました", { exact: true })).toBeVisible();
+    await page.reload();
+    await openInquiryByName(page, name);
+    await expect(page.locator("#edit-subject")).toHaveValue("再分類後の手動返信");
     await page.getByRole("button", { name: "送信", exact: true }).click();
 
     // 送信済みの読み取り専用ビューへ遷移する
     await expect(page.getByText("再分類後の手動返信")).toBeVisible();
     await expect(page.getByText("送信済み").first()).toBeVisible();
   });
+
+  }
 
   test("送信済みの問い合わせでは分類 Select が無効化される", async ({ page }) => {
     reseed();

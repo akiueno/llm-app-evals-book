@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -21,7 +20,7 @@ interface ResponseCardProps {
   setEditBody: (value: string) => void;
   isSaving: boolean;
   isSending: boolean;
-  saveMessage: { type: "success" | "error"; text: string } | null;
+  isBusy: boolean;
   onSaveDraft: () => void;
   onSend: () => void;
 }
@@ -34,7 +33,7 @@ export function ResponseCard({
   setEditBody,
   isSaving,
   isSending,
-  saveMessage,
+  isBusy,
   onSaveDraft,
   onSend,
 }: ResponseCardProps) {
@@ -51,16 +50,6 @@ export function ResponseCard({
       <CardContent className="space-y-4">
         {inquiry.status === "draft" && (
           <>
-            {saveMessage && (
-              <Alert
-                variant={
-                  saveMessage.type === "error" ? "destructive" : "default"
-                }
-              >
-                <AlertDescription>{saveMessage.text}</AlertDescription>
-              </Alert>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="edit-subject">件名</Label>
               <Input
@@ -84,11 +73,11 @@ export function ResponseCard({
               <Button
                 variant="outline"
                 onClick={onSaveDraft}
-                disabled={isSaving || isSending}
+                disabled={isBusy}
               >
                 {isSaving ? "保存中..." : "下書き保存"}
               </Button>
-              <Button onClick={onSend} disabled={isSaving || isSending}>
+              <Button onClick={onSend} disabled={isBusy}>
                 {isSending ? "送信中..." : "送信"}
               </Button>
             </div>

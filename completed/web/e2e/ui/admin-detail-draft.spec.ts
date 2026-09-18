@@ -37,8 +37,8 @@ test.describe("管理画面 詳細・下書き編集", () => {
     await page.locator("#edit-body").fill("オペレーターが編集した本文です。");
     await page.getByRole("button", { name: "下書き保存" }).click();
 
-    // 保存成功メッセージは再取得で即座にクリアされ得る（アプリ挙動）ため、
-    // 永続化を API で決定的に検証する。
+    await expect(page.getByText("下書きを保存しました", { exact: true })).toBeVisible();
+    // 永続化もAPIで検証する。
     await expect
       .poll(async () => (await getInquiry(request, id)).final_response?.body, {
         timeout: 10_000,
