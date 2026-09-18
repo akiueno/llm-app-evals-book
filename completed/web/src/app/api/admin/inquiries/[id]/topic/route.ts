@@ -5,6 +5,9 @@ import { INQUIRY_TOPICS } from "@/lib/constants";
 
 export const POST = (request: Request, context: { params: Promise<{ id: string }> }) =>
   withInquiry(request, context, (inquiry, body) => {
+    if (inquiry.status !== "draft") {
+      return NextResponse.json({ error: "下書き状態でのみ操作できます" }, { status: 409 });
+    }
     const { topic } = body;
 
     if (!topic || !INQUIRY_TOPICS.includes(topic as typeof INQUIRY_TOPICS[number])) {

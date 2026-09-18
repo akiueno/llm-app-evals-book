@@ -41,19 +41,20 @@ const statusFilterOptions: { value: string; label: string }[] = [
   { value: "draft", label: statusLabels.draft },
   { value: "sent", label: statusLabels.sent },
   { value: "error", label: statusLabels.error },
+  { value: "closed", label: statusLabels.closed },
 ];
 
 export default function AdminInquiriesPage() {
   const {
     inquiries,
     selectedInquiry,
-    setSelectedInquiry,
+    selectInquiry,
     statusFilter,
     setStatusFilter,
     topicFilter,
     setTopicFilter,
     isLoading,
-    error,
+    errors,
     fetchInquiries,
     fetchInquiryDetail,
     retryGeneration,
@@ -72,9 +73,11 @@ export default function AdminInquiriesPage() {
     handleSaveDraft,
     handleSend,
     handleTopicChange,
+    handleClose,
+    isClosing,
+    isBusy,
   } = useDraftEditor({
     selectedInquiry,
-    setSelectedInquiry,
     fetchInquiries,
     fetchInquiryDetail,
   });
@@ -88,23 +91,17 @@ export default function AdminInquiriesPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <HealthCheckModal />
-        <Alert variant="destructive">
-          <AlertTitle>エラー</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <HealthCheckModal />
       <div className="border-b bg-white px-6 py-4">
         <h1 className="text-2xl font-bold">お問い合わせ管理</h1>
+        {errors.map((error, index) => (
+          <Alert key={index} variant="destructive" className="mt-2">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ))}
       </div>
 
       <div className="flex h-[calc(100vh-73px)]">
@@ -170,7 +167,7 @@ export default function AdminInquiriesPage() {
                       className={`cursor-pointer hover:bg-gray-50 ${
                         selectedInquiry?.id === inquiry.id ? "bg-blue-50" : ""
                       }`}
-                      onClick={() => fetchInquiryDetail(inquiry.id)}
+                      onClick={() => selectInquiry(inquiry.id)}
                     >
                       <TableCell>
                         <div>
@@ -212,6 +209,22 @@ export default function AdminInquiriesPage() {
           {selectedInquiry ? (
             <div className="space-y-6">
               <InquiryContentCard inquiry={selectedInquiry} />
+              {saveMessage && (
+                <Alert variant={saveMessage.type === "error" ? "destructive" : "default"}>
+                  <AlertDescription>{saveMessage.text}</AlertDescription>
+                </Alert>
+              )}
+              {selectedInquiry.status === "closed" && (
+                <Alert>
+                  <AlertTitle>終了（対応不要）</AlertTitle>
+                  <AlertDescription>{formatDate(selectedInquiry.updated_at)} に担当者が確認しました。</AlertDescription>
+                </Alert>
+              )}
+              {selectedInquiry.status === "draft" && selectedInquiry.topic === "spam" && (
+                <Button onClick={handleClose} disabled={isBusy}>
+                  {isClosing ? "終了処理中..." : "対応不要として終了"}
+                </Button>
+              )}
 
               {selectedInquiry.status === "processing" && (
                 <Alert>
@@ -254,10 +267,8 @@ export default function AdminInquiriesPage() {
               />
 
               {/* 下書きなし（スパム判定）でも、分類が修正されていれば手動返信を可能にする */}
-              {selectedInquiry.status !== "processing" &&
-                selectedInquiry.status !== "error" &&
-                (selectedInquiry.generated_draft != null ||
-                  selectedInquiry.topic !== "spam") && (
+              {(selectedInquiry.status === "draft" || selectedInquiry.status === "sent") &&
+                selectedInquiry.topic !== "spam" && (
                   <ResponseCard
                     inquiry={selectedInquiry}
                     editSubject={editSubject}
@@ -266,7 +277,7 @@ export default function AdminInquiriesPage() {
                     setEditBody={setEditBody}
                     isSaving={isSaving}
                     isSending={isSending}
-                    saveMessage={saveMessage}
+                    isBusy={isBusy}
                     onSaveDraft={handleSaveDraft}
                     onSend={handleSend}
                   />

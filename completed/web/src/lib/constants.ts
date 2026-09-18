@@ -12,6 +12,7 @@ export const statusLabels: Record<InquiryStatus, string> = {
   draft: "下書き",
   sent: "送信済み",
   error: "エラー",
+  closed: "終了",
 };
 
 export const statusColors: Record<InquiryStatus, string> = {
@@ -19,6 +20,7 @@ export const statusColors: Record<InquiryStatus, string> = {
   draft: "bg-green-100 text-green-800",
   sent: "bg-gray-500 text-gray-50",
   error: "bg-red-100 text-red-800",
+  closed: "bg-gray-200 text-gray-800",
 };
 
 export const topicLabels: Record<InquiryTopic, string> = {

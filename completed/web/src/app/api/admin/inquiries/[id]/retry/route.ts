@@ -18,6 +18,9 @@ export async function POST(
       );
     }
 
+    if (inquiry.status !== "draft" && inquiry.status !== "error") {
+      return NextResponse.json({ error: "下書きまたはエラー状態でのみ再生成できます" }, { status: 409 });
+    }
     markInquiryAsProcessing(id);
 
     after(() =>

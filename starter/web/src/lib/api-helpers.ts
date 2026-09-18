@@ -10,6 +10,7 @@ export async function withInquiry(
 ): Promise<NextResponse> {
   try {
     const { id } = await context.params;
+    const body = await request.json().catch(() => ({}));
     const inquiry = getInquiryById(id);
     if (!inquiry) {
       return NextResponse.json(
@@ -17,7 +18,6 @@ export async function withInquiry(
         { status: 404 },
       );
     }
-    const body = await request.json().catch(() => ({}));
     return await handler(inquiry, body as Record<string, unknown>);
   } catch (error) {
     console.error("API error:", error);

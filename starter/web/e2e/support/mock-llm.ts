@@ -77,11 +77,18 @@ function send(res: import("http").ServerResponse, status: number, body: unknown)
   res.end(payload);
 }
 
+let feedbackCount = 0;
+
 const server = createServer((req, res) => {
   const url = req.url ?? "";
 
   if (req.method === "GET" && url.startsWith("/api/health")) {
     send(res, 200, { status: "ok" });
+    return;
+  }
+
+  if (req.method === "GET" && url === "/test/feedback-count") {
+    send(res, 200, { count: feedbackCount });
     return;
   }
 
@@ -115,11 +122,13 @@ const server = createServer((req, res) => {
   }
 
   if (req.method === "POST" && url.startsWith("/api/feedback")) {
+    feedbackCount += 1;
     const chunks: Buffer[] = [];
     req.on("data", (c) => chunks.push(c));
     req.on("end", () => {
       let body: {
         ai_body?: string | null;
+        final_body?: string;
         original_topic?: string;
         current_topic?: string;
       } = {};
@@ -127,6 +136,11 @@ const server = createServer((req, res) => {
         body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
       } catch {
         // 無効なJSONは既定応答にフォールバック
+      }
+      // 紙面308ページのFeedbackRequestと同じく、最終返信は文字列が必須。
+      if (typeof body.final_body !== "string") {
+        send(res, 422, { detail: "final_body must be a string" });
+        return;
       }
       send(res, 200, {
         operator_edited_topic: body.original_topic !== body.current_topic,

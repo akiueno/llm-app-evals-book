@@ -66,11 +66,14 @@ classify_topic → [spam?] → END
 
 ### Inquiry lifecycle
 
-`processing` → `draft` → `sent`
+`processing` → `draft` → `sent` (reply) or `closed` (spam reviewed by staff).
+Generation failures become `error`; `draft` / `error` can be retried. Terminal states cannot be edited or retried.
 
 1. Customer submits form → inquiry saved as `processing`, immediate 200 response
 2. `after()` triggers LLM → AI generates response with quality scores → status becomes `draft`
-3. Staff reviews on admin dashboard (auto-refreshes every 5s) → edits if needed → sends → `sent`
+3. Staff reviews on admin dashboard (list and selected detail refresh every 5s, preserving typed replies) → edits if needed → sends → `sent`
+4. For spam, staff explicitly closes without a reply → `closed`. `updated_at` records closure time; `sent_at` remains null.
+5. Fetch and mutation errors are shown in the UI without removing the editor. Completion messages survive detail refreshes.
 
 ### API routes
 
@@ -83,6 +86,7 @@ classify_topic → [spam?] → END
 | POST | `/api/admin/inquiries/[id]/send` | Send response |
 | POST | `/api/admin/inquiries/[id]/topic` | Update topic classification |
 | POST | `/api/admin/inquiries/[id]/retry` | Re-run AI generation (sets status back to `processing`) |
+| POST | `/api/admin/inquiries/[id]/close` | Close a draft spam inquiry without sending a reply |
 | GET | `/api/health` | Proxy FastAPI health check (drives the connection-error modal) |
 
 ### UI stack
@@ -100,3 +104,7 @@ Playwright E2E tests in `web/e2e/` (`api/` for request-level tests, `ui/` for br
 ## Path Aliases
 
 TypeScript path alias `@/*` maps to `web/src/*` (configured in tsconfig.json).
+
+### Book compatibility
+
+Preserve the code printed in the book. In particular, the feedback API on page 308 requires `final_body: str` and checks only `ai_body` before computing edit distance. Closing spam is a web-only database update; feedback is sent only when a reply is sent. Keep the chapter10 send route aligned with completed.

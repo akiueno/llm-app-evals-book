@@ -1,160 +1,86 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { Inquiry, InquiryTopic } from "@/lib/db";
+import { useState, useEffect, useRef } from "react";
+import type { Inquiry } from "@/lib/db";
+import { requireOk } from "@/lib/client-api";
 
 interface UseDraftEditorParams {
   selectedInquiry: Inquiry | null;
-  setSelectedInquiry: (inquiry: Inquiry | null) => void;
   fetchInquiries: () => Promise<void>;
   fetchInquiryDetail: (id: string) => Promise<void>;
 }
 
 export function useDraftEditor({
-  selectedInquiry,
-  setSelectedInquiry,
-  fetchInquiries,
-  fetchInquiryDetail,
+  selectedInquiry, fetchInquiries, fetchInquiryDetail,
 }: UseDraftEditorParams) {
-  const [editSubject, setEditSubject] = useState("");
-  const [editBody, setEditBody] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [isUpdatingTopic, setIsUpdatingTopic] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{
-    type: "success" | "error";
-    text: string;
+  const [editSubject, updateSubject] = useState("");
+  const [editBody, updateBody] = useState("");
+  const editorId = useRef<string | null>(null);
+  const dirty = useRef(false);
+  const [pending, setPending] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    id: string; type: "success" | "error"; text: string;
   } | null>(null);
+  const id = selectedInquiry?.id ?? null;
+  const response = selectedInquiry?.final_response ?? selectedInquiry?.generated_draft;
+  const subject = response?.subject ?? "";
+  const body = response?.body ?? "";
 
-  // selectedInquiry が変わったら編集フィールドを初期化
-  useEffect(
-    () => {
-      if (!selectedInquiry) {
-        setEditSubject("");
-        setEditBody("");
-        setSaveMessage(null);
-        return;
-      }
-      if (selectedInquiry.final_response) {
-        setEditSubject(selectedInquiry.final_response.subject);
-        setEditBody(selectedInquiry.final_response.body);
-      } else if (selectedInquiry.generated_draft) {
-        setEditSubject(selectedInquiry.generated_draft.subject);
-        setEditBody(selectedInquiry.generated_draft.body);
-      } else {
-        setEditSubject("");
-        setEditBody("");
-      }
-      setSaveMessage(null);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- id と updated_at の変化のみで発火させる
-    [selectedInquiry?.id, selectedInquiry?.updated_at],
-  );
+  useEffect(() => {
+    if (editorId.current !== id) {
+      editorId.current = id;
+      dirty.current = false;
+      setMessage(null);
+    }
+    // 分類変更・定期取得では未保存の入力を上書きしない。
+    if (!dirty.current) {
+      updateSubject(subject);
+      updateBody(body);
+    }
+  }, [id, subject, body]);
 
-  async function submitDraft(
-    endpoint: "draft" | "send",
-    inquiryId: string,
-    subject: string,
-    body: string,
-  ): Promise<void> {
-    const response = await fetch(
-      `/api/admin/inquiries/${inquiryId}/${endpoint}`,
-      {
+  const setEditSubject = (value: string) => { dirty.current = true; updateSubject(value); };
+  const setEditBody = (value: string) => { dirty.current = true; updateBody(value); };
+
+  async function mutate(endpoint: string, data: object, success: string) {
+    if (!id || pending) return;
+    const inquiryId = id;
+    setPending(endpoint);
+    setMessage(null);
+    try {
+      const result = await fetch(`/api/admin/inquiries/${inquiryId}/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body }),
-      },
-    );
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.error ?? `Failed to ${endpoint}`);
+        body: JSON.stringify(data),
+      });
+      await requireOk(result, "操作に失敗しました。もう一度お試しください。");
+      await Promise.all([fetchInquiries(), fetchInquiryDetail(inquiryId)]);
+      setMessage({ id: inquiryId, type: "success", text: success });
+    } catch (err) {
+      setMessage({ id: inquiryId, type: "error", text: err instanceof Error ? err.message : "操作に失敗しました" });
+    } finally {
+      setPending(null);
     }
   }
 
-  const handleSaveDraft = async () => {
-    if (!selectedInquiry) return;
-    setIsSaving(true);
-    setSaveMessage(null);
-    try {
-      await submitDraft("draft", selectedInquiry.id, editSubject, editBody);
-      setSaveMessage({ type: "success", text: "下書きを保存しました" });
-      fetchInquiries();
-      fetchInquiryDetail(selectedInquiry.id);
-    } catch (err) {
-      setSaveMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "保存に失敗しました",
-      });
-    } finally {
-      setIsSaving(false);
+  const handleSaveDraft = () => mutate("draft", { subject: editSubject, body: editBody }, "下書きを保存しました");
+  const handleSend = () => {
+    if (confirm("この内容でメールを送信します。よろしいですか？\n\n※実際のメール送信は行われません")) {
+      void mutate("send", { subject: editSubject, body: editBody }, "送信しました");
     }
   };
-
-  const handleSend = async () => {
-    if (!selectedInquiry) return;
-    if (
-      !confirm(
-        "この内容でメールを送信します。よろしいですか？\n\n※実際のメール送信は行われません",
-      )
-    ) {
-      return;
-    }
-    setIsSending(true);
-    setSaveMessage(null);
-    try {
-      await submitDraft("send", selectedInquiry.id, editSubject, editBody);
-      setSaveMessage({ type: "success", text: "送信しました" });
-      fetchInquiries();
-      fetchInquiryDetail(selectedInquiry.id);
-    } catch (err) {
-      setSaveMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "送信に失敗しました",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const handleTopicChange = async (newTopic: string) => {
-    if (!selectedInquiry) return;
-    setIsUpdatingTopic(true);
-    // 楽観的更新
-    setSelectedInquiry({
-      ...selectedInquiry,
-      topic: newTopic as InquiryTopic,
-    });
-    try {
-      const response = await fetch(
-        `/api/admin/inquiries/${selectedInquiry.id}/topic`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ topic: newTopic }),
-        },
-      );
-      if (!response.ok) throw new Error("Failed to update topic");
-      fetchInquiries();
-    } catch (err) {
-      // 失敗時にロールバック
-      setSelectedInquiry(selectedInquiry);
-      console.error("Error updating topic:", err);
-    } finally {
-      setIsUpdatingTopic(false);
+  const handleTopicChange = (topic: string) => mutate("topic", { topic }, "分類を変更しました");
+  const handleClose = () => {
+    if (confirm("このお問い合わせを対応不要として終了します。よろしいですか？")) {
+      void mutate("close", {}, "対応不要として終了しました");
     }
   };
 
   return {
-    editSubject,
-    setEditSubject,
-    editBody,
-    setEditBody,
-    isSaving,
-    isSending,
-    isUpdatingTopic,
-    saveMessage,
-    handleSaveDraft,
-    handleSend,
-    handleTopicChange,
+    editSubject, setEditSubject, editBody, setEditBody,
+    isSaving: pending === "draft", isSending: pending === "send",
+    isUpdatingTopic: pending !== null, isClosing: pending === "close", isBusy: pending !== null,
+    saveMessage: message?.id === id ? message : null,
+    handleSaveDraft, handleSend, handleTopicChange, handleClose,
   };
 }

@@ -206,11 +206,16 @@ flowchart TD
 - 返信案の編集機能
 - 承認・送信機能
 - スパム判定の再分類機能（スパム以外へ分類を修正した場合、返信案がなくても手動で返信を作成・送信できる）
+- 一覧と選択中の詳細を5秒ごとに取得し、生成完了や生成失敗を表示する
+- 未保存の返信は、定期取得や分類変更で上書きしない
+- 取得や操作に失敗した場合は、入力を残して画面にエラーを表示する。取得エラーは取得成功時、操作エラーは再操作時に解除する
+- 下書き状態のスパムは、担当者が「対応不要として終了」を押すと終了状態になる。AIがスパムと判定しただけでは終了しない
+- 現在の分類がスパムの場合、返信フォームを表示しない。送信済みと終了済みは編集できない
 
 #### F-006: 送信完了処理
 
 - 担当者が承認した返信を「送信済み」としてマーク
-- 画面上に「以下の内容で送信しました」と送信完了メッセージを表示
+- 画面上に「送信しました」と送信完了メッセージを表示
 - 送信履歴の記録
 - ※実際のメール送信機能は本サンプルでは実装しない
 
@@ -241,6 +246,8 @@ flowchart TD
 | POST | `/api/admin/inquiries/{id}/draft` | 返信の下書き保存 |
 | POST | `/api/admin/inquiries/{id}/send` | 返信送信 |
 | POST | `/api/admin/inquiries/{id}/topic` | トピック分類の変更 |
+| POST | `/api/admin/inquiries/{id}/retry` | 返信案の再生成 |
+| POST | `/api/admin/inquiries/{id}/close` | スパムを対応不要として終了 |
 
 ---
 
@@ -277,7 +284,7 @@ flowchart TD
 
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
-| status | string | ステータスでフィルタ（`processing` / `draft` / `sent`） |
+| status | string | ステータスでフィルタ（`processing` / `draft` / `sent` / `error` / `closed`） |
 | topic | string | トピックでフィルタ（`development` / `product` / `other` / `spam`） |
 | limit | int | 取得件数（デフォルト: 20） |
 | offset | int | オフセット |
@@ -341,6 +348,32 @@ flowchart TD
 ```
 
 ---
+
+#### 管理操作の状態制約
+
+下書き保存、送信、分類変更は `draft` 状態のみ受け付ける。
+スパムに返信する場合は、先に分類をスパム以外へ変更する。
+`sent` と `closed` は確定状態で、編集、再生成、再オープンはできない。
+状態が条件を満たさない場合はHTTP 409と `error` メッセージを返す。
+
+#### POST /api/admin/inquiries/{id}/retry
+
+`draft` または `error` の問い合わせを `processing` に戻し、AI生成を非同期に実行する。
+リクエスト本文は不要。
+成功時はHTTP 200と `{"message": "返信案の再生成を開始しました"}` を返す。
+生成成功時は `draft`、失敗時は `error` へ遷移し、管理画面で再試行できる。
+
+#### POST /api/admin/inquiries/{id}/close
+
+`draft` かつ `topic=spam` の問い合わせを `closed` にする。
+リクエスト本文は不要。
+成功時はHTTP 200と `id`、`status`、`updated_at` を返す。
+終了日時は `updated_at` に保存し、`sent_at` は設定しない。
+保存済みの手動返信は破棄し、`final_response` と `edit_distance` は `null` にする。
+分類修正の有無は `operator_edited_topic` に保存する。
+
+終了操作はweb内で状態を更新し、FastAPIやLangSmithは呼び出さない。
+第10章で説明する評価スコアの記録は、返信を送信したときに行う。
 
 #### POST /api/admin/inquiries/{id}/draft
 
@@ -450,7 +483,7 @@ flowchart TD
 
 #### POST /api/feedback
 
-送信時に返信案と最終返信の編集距離・トピック修正有無を算出し、LangSmithにフィードバックとして記録する。
+送信時に返信案と最終返信の編集距離およびトピック修正有無を算出し、LangSmithにフィードバックとして記録する。
 
 **リクエスト**
 
@@ -487,14 +520,13 @@ flowchart TD
 | customer_name | string | お客様名 |
 | customer_email | string | メールアドレス |
 | company_name | string | 会社名（任意） |
-| subject | string | 件名 |
 | content | string | お問い合わせ内容 |
-| status | enum | ステータス（`processing` / `draft` / `sent`） |
+| status | enum | ステータス（`processing` / `draft` / `sent` / `error` / `closed`） |
 | topic | enum | トピック分類（`development` / `product` / `other` / `spam`） |
 | original_topic | enum | AI分類時の元トピック（担当者修正の検知用） |
 | operator_edited_topic | boolean | 担当者がトピックを修正したか |
-| generated_draft | object | AI生成の返信案（件名・本文・品質スコア） |
-| final_response | object | 最終返信（件名・本文） |
+| generated_draft | object / null | AI生成の返信案（AIがスパムと判定した場合は `null`） |
+| final_response | object / null | 保存済み返信または送信済み返信。未保存や終了時は `null` |
 | classification_confidence | number | トピック分類の確信度（0.0〜1.0） |
 | quality_alert | boolean | 品質アラート（丁寧さNG） |
 | edit_distance | number | AI生成の返信案と最終送信した返信の編集距離（0.0〜1.0） |
@@ -508,16 +540,23 @@ flowchart TD
 ```mermaid
 stateDiagram-v2
   [*] --> processing: お問い合わせ受付
-  processing --> draft: 返信案生成完了
+  processing --> draft: AI処理完了（スパムを含む）
+  processing --> error: 生成失敗
+  error --> processing: 再生成
+  draft --> processing: 再生成
   draft --> sent: 送信完了
+  draft --> closed: スパムを担当者が確認して終了
   sent --> [*]
+  closed --> [*]
 ```
 
 | ステータス | 説明 |
 |-----------|------|
 | processing | AI処理中 |
-| draft | 返信案あり（AI生成後 or 担当者編集後） |
+| draft | 担当者の確認待ち。スパムは返信案なし |
 | sent | 送信完了 |
+| error | AI生成失敗。再生成可能 |
+| closed | 担当者が対応不要と確認して終了 |
 
 ## 6. LLMワークフロー詳細
 
